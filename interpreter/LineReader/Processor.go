@@ -2,10 +2,10 @@ package LineReader
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/kostyaBro/SICP/interpreter/interfaces"
 	"log"
 	"os"
-	"sort"
 	"strings"
 )
 
@@ -18,9 +18,6 @@ func NewProcessor(lisp interfaces.ILisp) interfaces.IProcessor {
 }
 
 func (p *processor) Process() {
-	// write string from keyboard
-	// ( -> switch ? err
-	// wait ) ? err
 	for true {
 		reader := bufio.NewReader(os.Stdin)
 		out, err := reader.ReadString('\n')
@@ -38,71 +35,76 @@ func (p *processor) Process() {
 			println("'(' more than ')'")
 			continue
 		}
-
-		var spaceIndexes []int
-		hookMap := make(map[int]string)
-
-		for index, char := range []byte(out) {
-			if strings.Compare(string(char), "(") == 0 || strings.Compare(string(char), ")") == 0 {
-				hookMap[index] = string(char)
+		rootNode := new(Node)
+		targetNode := rootNode
+		for _, char := range []byte(out) {
+			switch string(char) {
+			case "(":
+				targetNode = targetNode.hasOpen()
+				continue
+			case " ":
+				targetNode.hasSpace()
+				continue
+			case ")":
+				targetNode = targetNode.hasClose()
+				continue
+			default:
+				targetNode.hasString(string(char))
+				continue
 			}
-			if strings.Compare(string(char), " ") == 0 {
-				spaceIndexes = append(spaceIndexes, index)
+			if targetNode == rootNode {
+				log.Printf("breaking on targetNode == rootNode")
+				break
 			}
 		}
-
-		var hookMapKeys []int
-		for index := range hookMap {
-			hookMapKeys = append(hookMapKeys, index)
-		}
-		sort.Ints(hookMapKeys) // todo create fast sort by hand
-		sort.Ints(spaceIndexes)
-		if hookMapKeys[0] != 0 {
-			println("unexpected start")
-			continue
-		}
-		// LOG
-		for _, index := range hookMapKeys {
-			log.Printf("hookMap[%d] = %s", index, hookMap[index])
-		}
-		for index, val := range spaceIndexes {
-			log.Printf("spaceIndexes[%d] = %d", index, val)
-		}
-
-		subTask := out[hookMapKeys[hookMapKeys[0]]+1 : spaceIndexes[0]]
-
-		switch subTask {
-		case "+":
-		case "-":
-		case "*":
-		case "/":
-
-		}
-
-		// // find ()
-		// var subTask, _ = func () (subTask string, err error) {
-		// 	var openIndex int
-		// 	for _, index := range hookMapKeys {
-		// 		if strings.Compare(hookMap[index], "(") == 0 {
-		// 			openIndex = index
-		// 		} else if strings.Compare(hookMap[index], ")") == 0 {
-		// 			return out[openIndex:index], nil
-		// 		}
-		// 	}
-		// 	return out, errors.New("have not ()")
-		// }()
-		//
-		log.Printf("sub Task = '%s'", subTask)
-
-		//
-
-		// commands := strings.Split(out, " ")
-		// if len(commands) == 1 {
-		// 	println(commands[0])
-		// }
-		// for _, command := range commands  {
-		//
-		// }
-		// (define (sum a b) (a + b))
+		rootNode.Print()
 	}
 }
+
+// region Node
+
+type Node struct{
+	parent   *Node
+	value    string
+	children []*Node
+}
+
+func (node *Node) hasOpen() (control *Node) {
+	child := new(Node)
+	child.parent = node
+	node.children = append(node.children, child)
+	return child
+}
+
+func (node *Node) hasSpace() {
+	return
+}
+
+func (node *Node) hasClose() (control *Node) {
+	return node.parent
+}
+
+func (node *Node) hasString(str string) {
+	child := new(Node)
+	child.parent = node
+	node.children = append(node.children, child)
+	child.value = strings.Trim(str, " ")
+}
+
+func (node *Node) Print() {
+	target := node
+	fmt.Printf("%+v\n", target)
+	printChild(node, "\t")
+}
+
+
+func printChild(node *Node, indent string) {
+	if node.children != nil {
+		for _, child := range node.children {
+			fmt.Printf("%s%+v\n", indent, child)
+			printChild(child, indent + indent)
+		}
+	}
+}
+
+// endregion
