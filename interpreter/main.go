@@ -8,7 +8,7 @@ import (
 var (
 	help = "LISP interpreter\n" +
 		"--help, -h    show documentation\n" +
-		""
+		"exit          close interpreter"
 )
 
 func main() {
